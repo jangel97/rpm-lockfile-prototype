@@ -74,6 +74,19 @@ def setup_rpmdb(dest_dir, baseimage, arch):
         logging.info("Using already downloaded rpmdb")
 
     # Copy the cache to the correct destination directory.
+    # DEBUG: inspect cache before copytree
+    for root, dirs, files in os.walk(cache, followlinks=False):
+        for name in dirs + files:
+            full = os.path.join(root, name)
+            rel = os.path.relpath(full, cache)
+            if os.path.islink(full):
+                target = os.readlink(full)
+                resolves = os.path.exists(full)
+                logging.debug("CACHE SYMLINK: %s -> %s (resolves=%s)", rel, target, resolves)
+            elif os.path.isdir(full):
+                logging.debug("CACHE DIR: %s/", rel)
+            else:
+                logging.debug("CACHE FILE: %s (%d bytes)", rel, os.path.getsize(full))
     shutil.copytree(cache, dest_dir, dirs_exist_ok=True)
 
     _maybe_cleanup(cache)
