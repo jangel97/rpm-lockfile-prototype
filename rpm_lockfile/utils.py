@@ -409,7 +409,9 @@ def pin_context_versions(installed_packages, solvables, patterns):
     if not pattern_evrs:
         return solvables
 
-    for spec in list(solvables):
+    result = set()
+    for spec in solvables:
+        pinned = False
         for pattern in patterns:
             if fnmatch.fnmatch(spec, pattern) and pattern in pattern_evrs:
                 versioned = f"{spec}-{pattern_evrs[pattern]}"
@@ -418,11 +420,12 @@ def pin_context_versions(installed_packages, solvables, patterns):
                     spec,
                     versioned,
                 )
-                solvables.discard(spec)
-                solvables.add(versioned)
+                result.add(versioned)
+                pinned = True
                 break
-
-    return solvables
+        if not pinned:
+            result.add(spec)
+    return result
 
 
 CONTAINERFILE_SCHEMA = {
