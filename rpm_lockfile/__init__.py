@@ -370,6 +370,13 @@ def process_arch(
 def collect_content_origins(config_dir, origins, variables=None):
     loaders = content_origin.load()
     repos = []
+
+    if origins.pop("systemRepos", False):
+        logging.info(
+            "Loading system-configured repositories from /etc/yum.repos.d/"
+        )
+        repos.extend(content_origin.load_system_repos())
+
     for source_type, source_data in origins.items():
         try:
             collector = loaders[source_type](config_dir, variables=variables)

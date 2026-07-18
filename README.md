@@ -145,6 +145,11 @@ be used. It's a yaml file with following structure.
 
 ```yaml
 contentOrigin:
+  # Load enabled repositories from /etc/yum.repos.d/. Useful when the system
+  # is registered with subscription-manager (e.g. via an activation key) and
+  # repos are already configured with proper authentication.
+  systemRepos: true
+
   # Define at least one source of packages, but you can have as many as you want.
   repos:
     # List of objects with repoid and baseurl

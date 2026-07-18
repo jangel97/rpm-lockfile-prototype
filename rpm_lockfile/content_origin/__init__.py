@@ -1,3 +1,7 @@
+import configparser
+import glob
+import logging
+
 from importlib.metadata import entry_points
 from dataclasses import dataclass, field
 
@@ -38,3 +42,40 @@ def load():
         # Python 3.9
         eps = entry_points()[group]
     return {c.name: c.load() for c in eps}
+
+
+def load_system_repos():
+    """Load enabled repositories from /etc/yum.repos.d/."""
+    repo_files = sorted(glob.glob("/etc/yum.repos.d/*.repo"))
+    if not repo_files:
+        logging.warning(
+            "systemRepos: no .repo files found in /etc/yum.repos.d/"
+        )
+        return []
+
+    repos = []
+    for repo_file in repo_files:
+        parser = configparser.ConfigParser(interpolation=None)
+        parser.read(repo_file)
+        for section in parser.sections():
+            if parser.get(section, "enabled", fallback="1") == "0":
+                continue
+            options = {"repoid": section} | dict(parser.items(section))
+            try:
+                repos.append(Repo.from_dict(options))
+            except RuntimeError:
+                logging.debug(
+                    "Skipping repo %s: no baseurl/metalink/mirrorlist", section
+                )
+
+    if not repos:
+        logging.warning(
+            "systemRepos: no enabled repositories found in /etc/yum.repos.d/"
+        )
+    else:
+        logging.info(
+            "systemRepos: loaded %d repos: %s",
+            len(repos),
+            ", ".join(r.repoid for r in repos),
+        )
+    return repos
