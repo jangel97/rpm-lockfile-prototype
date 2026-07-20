@@ -89,11 +89,8 @@ def get_schema():
             "contentOrigin": {
                 "type": "object",
                 "properties": {
-                    "systemRepos": {"type": "boolean"},
-                    **{
-                        source_type: {"type": "array", "items": collector.schema}
-                        for source_type, collector in content_origin.load().items()
-                    },
+                    source_type: {"type": "array", "items": collector.schema}
+                    for source_type, collector in content_origin.load().items()
                 },
             },
             "context": {
