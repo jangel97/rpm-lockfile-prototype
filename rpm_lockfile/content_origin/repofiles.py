@@ -1,7 +1,6 @@
 import configparser
 import glob
 import os
-import platform
 
 import requests
 
@@ -16,14 +15,6 @@ repositories are ignored.
 The repos must have exactly one base url. Mirror lists are not supported. Any
 repo level options are passed over to DNF.
 """
-
-
-def _normalize_basearch(options):
-    host_arch = platform.machine()
-    for key in ("baseurl", "metalink", "mirrorlist"):
-        value = options.get(key)
-        if value and isinstance(value, str) and f"/{host_arch}/" in value:
-            options[key] = value.replace(f"/{host_arch}/", "/$basearch/")
 
 
 class RepofileOrigin:
@@ -113,5 +104,4 @@ class RepofileOrigin:
             if parser.get(section, "enabled", fallback="1") == "0":
                 continue
             options = {"repoid": section} | dict(parser.items(section))
-            _normalize_basearch(options)
             yield Repo.from_dict(options)

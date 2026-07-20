@@ -205,19 +205,3 @@ def test_collect_local_absolute_path(tmpdir):
     assert repos == [REPO]
 
 
-def test_normalize_basearch():
-    origin = repofiles.RepofileOrigin("/test")
-    repofile = """
-[test-repo]
-baseurl = https://cdn.example.com/content/dist/rhel9/9/TESTARCH/baseos/os
-"""
-    with patch(
-        "rpm_lockfile.content_origin.repofiles.platform.machine",
-        return_value="TESTARCH",
-    ):
-        repos = list(origin.parse_repofile(repofile))
-
-    assert len(repos) == 1
-    assert repos[0].kwargs["baseurl"] == [
-        "https://cdn.example.com/content/dist/rhel9/9/$basearch/baseos/os"
-    ]
