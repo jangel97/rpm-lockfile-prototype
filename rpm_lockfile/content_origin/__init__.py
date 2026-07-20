@@ -79,6 +79,7 @@ def load_system_repos():
                 continue
             options = {"repoid": section} | dict(parser.items(section))
             _normalize_basearch(options)
+            options.setdefault("skip_if_unavailable", "1")
             try:
                 repos.append(Repo.from_dict(options))
             except RuntimeError:
