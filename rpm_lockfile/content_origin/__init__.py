@@ -1,6 +1,7 @@
 import configparser
 import glob
 import logging
+import platform
 
 from importlib.metadata import entry_points
 from dataclasses import dataclass, field
@@ -44,6 +45,22 @@ def load():
     return {c.name: c.load() for c in eps}
 
 
+def _normalize_basearch(options):
+    """Replace the host architecture with $basearch in repo URLs.
+
+    subscription-manager writes baseurls with the host architecture
+    hardcoded (e.g. /x86_64/).  Replacing it with $basearch lets DNF
+    substitute the correct value for each target architecture, the same
+    approach composes.py uses for compose paths.
+    """
+    host_arch = platform.machine()
+    for key in ("baseurl", "metalink", "mirrorlist"):
+        value = options.get(key)
+        if value and isinstance(value, str) and f"/{host_arch}/" in value:
+            options[key] = value.replace(f"/{host_arch}/", "/$basearch/")
+    return options
+
+
 def load_system_repos():
     """Load enabled repositories from /etc/yum.repos.d/."""
     repo_files = sorted(glob.glob("/etc/yum.repos.d/*.repo"))
@@ -61,6 +78,7 @@ def load_system_repos():
             if parser.get(section, "enabled", fallback="1") == "0":
                 continue
             options = {"repoid": section} | dict(parser.items(section))
+            _normalize_basearch(options)
             try:
                 repos.append(Repo.from_dict(options))
             except RuntimeError:
