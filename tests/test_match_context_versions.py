@@ -1,11 +1,15 @@
+import logging
+
+import pytest
 from unittest.mock import Mock
 
 from rpm_lockfile.utils import pin_context_versions
 
 
-def _make_pkg(name, version, release):
+def _make_pkg(name, version, release, epoch=0):
     pkg = Mock()
     pkg.name = name
+    pkg.epoch = epoch
     pkg.version = version
     pkg.release = release
     return pkg
@@ -58,15 +62,11 @@ class TestPinContextVersions:
         ]
         solvables = {"kernel-devel"}
 
-        import pytest
-
         with pytest.raises(RuntimeError, match="different versions"):
             pin_context_versions(installed, solvables, ["kernel-*"])
 
     def test_no_installed_packages_warns(self, caplog):
         solvables = {"kernel-devel"}
-
-        import logging
 
         with caplog.at_level(logging.WARNING):
             result = pin_context_versions([], solvables, ["kernel-*"])
@@ -89,3 +89,12 @@ class TestPinContextVersions:
         result = pin_context_versions(installed, solvables, ["kernel-*"])
 
         assert result == {"vim", "tmux", "git"}
+
+    def test_epoch_included_when_nonzero(self):
+        installed = [_make_pkg("dbus", "1.12.20", "8.el9", epoch=1)]
+        solvables = {"dbus", "gcc"}
+
+        result = pin_context_versions(installed, solvables, ["dbus"])
+
+        assert "dbus-1:1.12.20-8.el9" in result
+        assert "gcc" in result

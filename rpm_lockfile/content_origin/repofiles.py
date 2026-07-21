@@ -86,6 +86,7 @@ class RepofileOrigin:
                 paths = sorted(glob.glob(url))
             else:
                 paths = sorted(glob.glob(os.path.join(self.config_dir, url)))
+            paths = [p for p in paths if os.path.isfile(p)]
             if not paths:
                 raise FileNotFoundError(f"No files matching: {url}")
             for path in paths:
