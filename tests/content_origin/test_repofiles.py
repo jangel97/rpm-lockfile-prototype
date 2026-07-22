@@ -1,3 +1,5 @@
+import platform
+
 import pytest
 
 from unittest.mock import patch, mock_open, Mock, ANY
@@ -203,3 +205,45 @@ def test_collect_local_absolute_path(tmpdir):
     repos = list(origin.collect_local(str(tmpdir / "test.repo")))
 
     assert repos == [REPO]
+
+
+REPOFILE_WITH_HOST_ARCH = """
+[baseos-rpms]
+baseurl = https://cdn.redhat.com/content/eus/rhel9/9.6/{arch}/baseos/os
+"""
+
+REPOFILE_NO_ARCH_IN_URL = """
+[cuda-rpms]
+baseurl = https://private.console.redhat.com/api/pulp-content/rhel-ai/cuda-rhel-9
+"""
+
+
+def test_normalize_basearch_replaces_host_arch():
+    arch = platform.machine()
+    contents = REPOFILE_WITH_HOST_ARCH.format(arch=arch)
+    origin = repofiles.RepofileOrigin("/test")
+    repos = list(origin.parse_repofile(contents))
+
+    assert len(repos) == 1
+    assert "$basearch" in repos[0].kwargs["baseurl"][0]
+    assert f"/{arch}/" not in repos[0].kwargs["baseurl"][0]
+
+
+def test_normalize_basearch_leaves_urls_without_arch():
+    origin = repofiles.RepofileOrigin("/test")
+    repos = list(origin.parse_repofile(REPOFILE_NO_ARCH_IN_URL))
+
+    assert len(repos) == 1
+    assert repos[0].kwargs["baseurl"][0] == "https://private.console.redhat.com/api/pulp-content/rhel-ai/cuda-rhel-9"
+
+
+def test_normalize_basearch_leaves_existing_basearch():
+    contents = """
+[baseos-rpms]
+baseurl = https://cdn.redhat.com/content/eus/rhel9/9.6/$basearch/baseos/os
+"""
+    origin = repofiles.RepofileOrigin("/test")
+    repos = list(origin.parse_repofile(contents))
+
+    assert len(repos) == 1
+    assert repos[0].kwargs["baseurl"][0] == "https://cdn.redhat.com/content/eus/rhel9/9.6/$basearch/baseos/os"

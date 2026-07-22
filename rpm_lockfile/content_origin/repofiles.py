@@ -1,6 +1,7 @@
 import configparser
 import glob
 import os
+import platform
 
 import requests
 
@@ -105,4 +106,24 @@ class RepofileOrigin:
             if parser.get(section, "enabled", fallback="1") == "0":
                 continue
             options = {"repoid": section} | dict(parser.items(section))
+            _normalize_basearch(options)
             yield Repo.from_dict(options)
+
+
+def _normalize_basearch(options):
+    """Replace the host architecture in repo URLs with $basearch.
+
+    subscription-manager hardcodes the host arch into repo URLs (e.g.
+    /x86_64/). This prevents multi-arch resolution since every arch gets
+    the same host-arch URL. Replacing with $basearch lets DNF expand it
+    per target architecture, matching the approach in composes.py.
+    """
+    host_arch = platform.machine()
+    replaced = False
+    for key in ("baseurl", "metalink", "mirrorlist"):
+        value = options.get(key)
+        if value and isinstance(value, str) and f"/{host_arch}/" in value:
+            options[key] = value.replace(f"/{host_arch}/", "/$basearch/")
+            replaced = True
+    if replaced:
+        options.setdefault("skip_if_unavailable", "1")
